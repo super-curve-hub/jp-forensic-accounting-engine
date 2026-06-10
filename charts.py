@@ -1,17 +1,21 @@
+import pandas as pd
 import plotly.express as px
 import streamlit as st
-import pandas as pd
 
 
 def render_trend_charts(result):
 
     df = result["df"].copy()
 
-    # =====================================
-    # ROIC / ROE
-    # =====================================
+    # =========================
+    # ROIC
+    # =========================
 
-    if "ROIC_TTM" in df.columns:
+    if (
+        "ROIC_TTM" in df.columns
+        and
+        df["ROIC_TTM"].notna().any()
+    ):
 
         tmp = df.copy()
 
@@ -35,7 +39,15 @@ def render_trend_charts(result):
             width="stretch"
         )
 
-    elif "roe" in df.columns:
+    # =========================
+    # ROE
+    # =========================
+
+    elif (
+        "roe" in df.columns
+        and
+        df["roe"].notna().any()
+    ):
 
         tmp = df.copy()
 
@@ -59,11 +71,15 @@ def render_trend_charts(result):
             width="stretch"
         )
 
-    # =====================================
+    # =========================
     # Accrual
-    # =====================================
+    # =========================
 
-    if "AccrualRatio" in df.columns:
+    if (
+        "AccrualRatio" in df.columns
+        and
+        df["AccrualRatio"].notna().any()
+    ):
 
         tmp = df.copy()
 
@@ -87,11 +103,15 @@ def render_trend_charts(result):
             width="stretch"
         )
 
-    # =====================================
+    # =========================
     # Risk
-    # =====================================
+    # =========================
 
-    if "ForensicRiskScore" in df.columns:
+    if (
+        "ForensicRiskScore" in df.columns
+        and
+        df["ForensicRiskScore"].notna().any()
+    ):
 
         fig = px.bar(
             df,
@@ -109,11 +129,15 @@ def render_trend_charts(result):
             width="stretch"
         )
 
-    # =====================================
+    # =========================
     # FCF Margin
-    # =====================================
+    # =========================
 
-    if "FCFMargin" in df.columns:
+    if (
+        "FCFMargin" in df.columns
+        and
+        df["FCFMargin"].notna().any()
+    ):
 
         tmp = df.copy()
 
@@ -176,7 +200,7 @@ def _build_hover_cols(plot_df):
 
     hover_cols = {}
 
-    pct_cols = [
+    percent_cols = [
         "ROIC",
         "ROIC-WACC",
         "ROE",
@@ -185,19 +209,19 @@ def _build_hover_cols(plot_df):
         "FCFMargin",
     ]
 
-    num_cols = [
+    number_cols = [
         "Risk",
         "EconomicScore",
         "Quality",
         "PBR",
     ]
 
-    for col in pct_cols:
+    for col in percent_cols:
 
         if col in plot_df.columns:
             hover_cols[col] = ":.1%"
 
-    for col in num_cols:
+    for col in number_cols:
 
         if col in plot_df.columns:
             hover_cols[col] = ":.1f"
@@ -224,6 +248,22 @@ def compare_scatter(compare_df):
         else:
             plot_df["EconomicScore"] = 50
 
+    plot_df["EconomicScore"] = (
+        pd.to_numeric(
+            plot_df["EconomicScore"],
+            errors="coerce"
+        )
+        .fillna(50)
+    )
+
+    plot_df["Risk"] = (
+        pd.to_numeric(
+            plot_df["Risk"],
+            errors="coerce"
+        )
+        .fillna(50)
+    )
+
     plot_df["BubbleSize"] = (
         _bubble_size(plot_df)
     )
@@ -247,11 +287,10 @@ def compare_scatter(compare_df):
 
     fig.update_layout(
         height=750,
-        xaxis_title="Forensic Risk",
-        yaxis_title="Economic Score",
-        coloraxis_colorbar_title="Economic Score",
         showlegend=False,
-        hovermode="closest"
+        hovermode="closest",
+        xaxis_title="Forensic Risk",
+        yaxis_title="Economic Score"
     )
 
     return fig
@@ -276,6 +315,22 @@ def screen_scatter(screen_df):
         else:
             plot_df["EconomicScore"] = 50
 
+    plot_df["EconomicScore"] = (
+        pd.to_numeric(
+            plot_df["EconomicScore"],
+            errors="coerce"
+        )
+        .fillna(50)
+    )
+
+    plot_df["Risk"] = (
+        pd.to_numeric(
+            plot_df["Risk"],
+            errors="coerce"
+        )
+        .fillna(50)
+    )
+
     plot_df["BubbleSize"] = (
         _bubble_size(plot_df)
     )
@@ -299,11 +354,10 @@ def screen_scatter(screen_df):
 
     fig.update_layout(
         height=700,
-        xaxis_title="Forensic Risk",
-        yaxis_title="Economic Score",
-        coloraxis_colorbar_title="Economic Score",
         showlegend=False,
-        hovermode="closest"
+        hovermode="closest",
+        xaxis_title="Forensic Risk",
+        yaxis_title="Economic Score"
     )
 
     return fig
