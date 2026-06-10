@@ -3,13 +3,17 @@ import plotly.express as px
 import streamlit as st
 
 
+# =====================================================
+# Trend Charts
+# =====================================================
+
 def render_trend_charts(result):
 
     df = result["df"].copy()
 
-    # =========================
+    # ==========================================
     # ROIC
-    # =========================
+    # ==========================================
 
     if (
         "ROIC_TTM" in df.columns
@@ -39,41 +43,9 @@ def render_trend_charts(result):
             width="stretch"
         )
 
-    # =========================
-    # ROE
-    # =========================
-
-    elif (
-        "roe" in df.columns
-        and
-        df["roe"].notna().any()
-    ):
-
-        tmp = df.copy()
-
-        tmp["ROE_pct"] = (
-            tmp["roe"] * 100
-        )
-
-        fig = px.line(
-            tmp,
-            x="date",
-            y="ROE_pct",
-            title="ROE Trend"
-        )
-
-        fig.update_layout(
-            height=450
-        )
-
-        st.plotly_chart(
-            fig,
-            width="stretch"
-        )
-
-    # =========================
-    # Accrual
-    # =========================
+    # ==========================================
+    # Accrual Ratio
+    # ==========================================
 
     if (
         "AccrualRatio" in df.columns
@@ -91,7 +63,7 @@ def render_trend_charts(result):
             tmp,
             x="date",
             y="Accrual_pct",
-            title="Accrual Trend"
+            title="Accrual Ratio Trend"
         )
 
         fig.update_layout(
@@ -103,9 +75,9 @@ def render_trend_charts(result):
             width="stretch"
         )
 
-    # =========================
-    # Risk
-    # =========================
+    # ==========================================
+    # Forensic Risk
+    # ==========================================
 
     if (
         "ForensicRiskScore" in df.columns
@@ -129,9 +101,9 @@ def render_trend_charts(result):
             width="stretch"
         )
 
-    # =========================
+    # ==========================================
     # FCF Margin
-    # =========================
+    # ==========================================
 
     if (
         "FCFMargin" in df.columns
@@ -161,6 +133,10 @@ def render_trend_charts(result):
             width="stretch"
         )
 
+
+# =====================================================
+# Bubble Size
+# =====================================================
 
 def _bubble_size(plot_df):
 
@@ -196,24 +172,38 @@ def _bubble_size(plot_df):
     )
 
 
+# =====================================================
+# Hover Columns
+# =====================================================
+
 def _build_hover_cols(plot_df):
 
     hover_cols = {}
 
     percent_cols = [
+
         "ROIC",
+
         "ROIC-WACC",
-        "ROE",
-        "ROE-CoE",
-        "TotalYield",
+
         "FCFMargin",
+
+        "BuybackYield",
+
+        "DividendYieldProxy",
     ]
 
     number_cols = [
+
         "Risk",
+
         "EconomicScore",
+
         "Quality",
+
         "PBR",
+
+        "CFO/NI",
     ]
 
     for col in percent_cols:
@@ -229,6 +219,10 @@ def _build_hover_cols(plot_df):
     return hover_cols
 
 
+# =====================================================
+# Compare Scatter
+# =====================================================
+
 def compare_scatter(compare_df):
 
     if compare_df.empty:
@@ -240,13 +234,7 @@ def compare_scatter(compare_df):
         plot_df["Risk"] = 50
 
     if "EconomicScore" not in plot_df.columns:
-
-        if "Quality" in plot_df.columns:
-            plot_df["EconomicScore"] = (
-                plot_df["Quality"]
-            )
-        else:
-            plot_df["EconomicScore"] = 50
+        plot_df["EconomicScore"] = 50
 
     plot_df["EconomicScore"] = (
         pd.to_numeric(
@@ -296,6 +284,10 @@ def compare_scatter(compare_df):
     return fig
 
 
+# =====================================================
+# Screening Scatter
+# =====================================================
+
 def screen_scatter(screen_df):
 
     if screen_df.empty:
@@ -307,13 +299,7 @@ def screen_scatter(screen_df):
         plot_df["Risk"] = 50
 
     if "EconomicScore" not in plot_df.columns:
-
-        if "Quality" in plot_df.columns:
-            plot_df["EconomicScore"] = (
-                plot_df["Quality"]
-            )
-        else:
-            plot_df["EconomicScore"] = 50
+        plot_df["EconomicScore"] = 50
 
     plot_df["EconomicScore"] = (
         pd.to_numeric(
@@ -361,3 +347,6 @@ def screen_scatter(screen_df):
     )
 
     return fig
+
+
+print("CHARTS LOADED")
