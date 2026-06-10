@@ -957,12 +957,27 @@ def run_jp_forensic_engine(
         df["sector"].iloc[-1]
     )
 
+    print("=" * 50)
+    print("DEBUG")
+    print("ticker =", ticker)
+    print("sector =", sector)
+    print(
+        "is_financial =",
+        is_financial_sector(sector)
+    )
+    print("=" * 50)
+
     if is_financial_sector(sector):
+
+        print("RUNNING BANK ENGINE")
+
         return run_bank_engine(
             financial_df=financial_df,
             ticker=ticker,
             coe=coe
         )
+
+    print("RUNNING CORPORATE ENGINE")
 
     return run_corporate_engine(
         financial_df=financial_df,
