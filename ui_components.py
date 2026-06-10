@@ -349,3 +349,4 @@ def render_ranking_table(df):
             df[display_cols],
             use_container_width=True
         )
+print("UI COMPONENTS LOADED")
