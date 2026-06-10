@@ -113,20 +113,52 @@ def is_financial_latest(latest):
 
 def hero_card(latest, wacc_pct):
 
-    st.success("hero card called")
-
     company = latest.get("Company", "NA")
     ticker = latest.get("Ticker", "NA")
+    grade = latest.get("Grade", "NA")
+    regime = latest.get("Regime", "NA")
 
-    st.markdown(
-        f"""
-## {company}
+    st.subheader(company)
 
-**Ticker:** {ticker}
-        """
+    st.caption(
+        f"{ticker} | WACC {wacc_pct:.1f}%"
     )
 
-    st.success("hero card rendered")
+    st.markdown(
+        f"### Grade {grade} — {regime}"
+    )
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        st.metric(
+            "ROIC",
+            pct_fmt(
+                latest.get("ROIC_TTM")
+            )
+        )
+
+    with c2:
+        st.metric(
+            "ROIC-WACC",
+            pct_fmt(
+                latest.get(
+                    "ROIC_WACC_Spread"
+                )
+            )
+        )
+
+    with c3:
+        st.metric(
+            "Risk",
+            ratio_fmt(
+                latest.get(
+                    "ForensicRiskScore"
+                ),
+                0
+            )
+        )
+
 
 def metric_cards(latest):
 
