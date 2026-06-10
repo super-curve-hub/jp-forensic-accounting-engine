@@ -30,46 +30,6 @@ REQUIRED_COLUMNS = [
 ]
 
 
-FINANCIAL_SECTORS = [
-    "Banks",
-    "Insurance",
-    "Capital Markets",
-    "Financial Services",
-    "銀行",
-    "保険",
-    "証券",
-    "金融"
-]
-
-
-def is_financial_sector(sector):
-
-    if pd.isna(sector):
-        return False
-
-    sector = str(sector).lower().strip()
-
-    keywords = [
-
-        # English
-        "bank",
-        "banks",
-        "insurance",
-        "financial",
-        "capital markets",
-        "broker",
-        "securities",
-        "asset management",
-        "consumer finance",
-
-        # Japanese
-        "銀行",
-        "保険",
-        "証券",
-        "金融",
-    ]
-
-
     return any(
         keyword in sector
         for keyword in keywords
