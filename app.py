@@ -83,10 +83,18 @@ with tab_analysis:
     )
 
     companies = (
-        financial_df[["ticker", "company"]]
-        .drop_duplicates()
-        .sort_values("ticker")
-    )
+    financial_df[
+        ~financial_df["sector"]
+        .astype(str)
+        .str.contains(
+            "銀行|金融|保険|証券|bank|financial|insurance|securities",
+            case=False,
+            na=False
+        )
+    ][["ticker", "company"]]
+    .drop_duplicates()
+    .sort_values("ticker")
+)
 
     if search.strip():
         s = search.strip().lower()
@@ -208,12 +216,20 @@ with tab_screening:
     st.subheader("Screening")
 
     universe = (
-        financial_df["ticker"]
-        .dropna()
+    financial_df[
+        ~financial_df["sector"]
         .astype(str)
-        .unique()
-        .tolist()
-    )
+        .str.contains(
+            "銀行|金融|保険|証券|bank|financial|insurance|securities",
+            case=False,
+            na=False
+        )
+    ]["ticker"]
+    .dropna()
+    .astype(str)
+    .unique()
+    .tolist()
+)
 
     c1, c2, c3, c4 = st.columns(4)
 
