@@ -47,9 +47,11 @@ def is_financial_sector(sector):
     if pd.isna(sector):
         return False
 
-    sector = str(sector).lower()
+    sector = str(sector).lower().strip()
 
     keywords = [
+
+        # English
         "bank",
         "banks",
         "insurance",
@@ -59,13 +61,19 @@ def is_financial_sector(sector):
         "securities",
         "asset management",
         "consumer finance",
+
+        # Japanese
+        "銀行",
+        "保険",
+        "証券",
+        "金融",
     ]
 
-    return any(
-        k in sector
-        for k in keywords
-    )
 
+    return any(
+        keyword in sector
+        for keyword in keywords
+    )
 
 def safe_div(a, b):
 
