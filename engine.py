@@ -4,7 +4,7 @@ import numpy as np
 
 # =====================================================
 # Required Columns
-# Non-financial corporate version only
+# Non-financial corporate engine only
 # =====================================================
 
 REQUIRED_COLUMNS = [
@@ -33,7 +33,7 @@ REQUIRED_COLUMNS = [
 
 
 # =====================================================
-# Helpers
+# Utilities
 # =====================================================
 
 def safe_div(a, b):
@@ -103,7 +103,7 @@ def load_financial_data(path):
     return df
 
 
-def forensic_grade(score):
+def risk_grade(score):
     if pd.isna(score):
         return "NA"
 
@@ -122,11 +122,45 @@ def forensic_grade(score):
     return "F"
 
 
+def quality_grade(score):
+    if pd.isna(score):
+        return "NA"
+
+    if score >= 85:
+        return "A"
+
+    if score >= 70:
+        return "B"
+
+    if score >= 55:
+        return "C"
+
+    if score >= 40:
+        return "D"
+
+    return "F"
+
+
+# Backward-compatible name used by UI / older code.
+def forensic_grade(score):
+    return risk_grade(score)
+
+
 # =====================================================
-# Regime Label
+# Regime
 # =====================================================
 
 def corporate_regime_label(latest):
+    quality = latest.get(
+        "QualityScore",
+        np.nan
+    )
+
+    risk = latest.get(
+        "ForensicRiskScore",
+        np.nan
+    )
+
     spread = latest.get(
         "ROIC_WACC_Spread",
         np.nan
@@ -142,11 +176,6 @@ def corporate_regime_label(latest):
         np.nan
     )
 
-    risk = latest.get(
-        "ForensicRiskScore",
-        np.nan
-    )
-
     roic = latest.get(
         "ROIC_TTM",
         np.nan
@@ -158,14 +187,10 @@ def corporate_regime_label(latest):
     )
 
     if (
-        pd.notna(spread)
-        and pd.notna(accrual)
-        and pd.notna(cfo)
+        pd.notna(quality)
         and pd.notna(risk)
-        and spread > 0
-        and accrual < 0
-        and cfo > 1
-        and risk <= 20
+        and quality >= 80
+        and risk <= 25
     ):
         return "Quality Compounder"
 
@@ -181,18 +206,355 @@ def corporate_regime_label(latest):
         return "TSE Reform Candidate"
 
     if (
-        pd.notna(roic)
-        and roic > 0.15
+        pd.notna(spread)
+        and pd.notna(accrual)
+        and pd.notna(cfo)
         and pd.notna(risk)
+        and spread > 0
+        and accrual < 0
+        and cfo > 1
         and risk <= 40
     ):
-        return "High ROIC / Monitor"
+        return "High Quality / Monitor"
 
     return "Neutral / Inconclusive"
 
 
 # =====================================================
-# Corporate Forensic Engine
+# Quality Score
+# Measures business quality and capital efficiency
+# =====================================================
+
+def calculate_quality_score(row):
+    roic = row.get(
+        "ROIC_TTM",
+        np.nan
+    )
+
+    spread = row.get(
+        "ROIC_WACC_Spread",
+        np.nan
+    )
+
+    fcf_margin = row.get(
+        "FCFMargin",
+        np.nan
+    )
+
+    cfo_ni = row.get(
+        "CFO_to_NI",
+        np.nan
+    )
+
+    buyback = row.get(
+        "BuybackYield",
+        np.nan
+    )
+
+    dividend = row.get(
+        "DividendYieldProxy",
+        np.nan
+    )
+
+    roic = 0 if pd.isna(roic) else roic
+    spread = 0 if pd.isna(spread) else spread
+    fcf_margin = 0 if pd.isna(fcf_margin) else fcf_margin
+    cfo_ni = 0 if pd.isna(cfo_ni) else cfo_ni
+    buyback = 0 if pd.isna(buyback) else buyback
+    dividend = 0 if pd.isna(dividend) else dividend
+
+    # Max 30
+    roic_score = min(
+        30,
+        max(
+            0,
+            roic * 150
+        )
+    )
+
+    # Max 25
+    spread_score = min(
+        25,
+        max(
+            0,
+            spread * 250
+        )
+    )
+
+    # Max 20
+    fcf_score = min(
+        20,
+        max(
+            0,
+            fcf_margin * 100
+        )
+    )
+
+    # Max 10
+    cash_score = min(
+        10,
+        max(
+            0,
+            cfo_ni * 10
+        )
+    )
+
+    # Max 15
+    capital_score = min(
+        15,
+        max(
+            0,
+            (buyback + dividend) * 300
+        )
+    )
+
+    quality = (
+        roic_score
+        +
+        spread_score
+        +
+        fcf_score
+        +
+        cash_score
+        +
+        capital_score
+    )
+
+    return round(
+        max(
+            0,
+            min(
+                100,
+                quality
+            )
+        ),
+        1
+    )
+
+
+# =====================================================
+# Forensic Risk Score
+# Measures accounting / cash-flow / balance-sheet risk
+# =====================================================
+
+def calculate_forensic_risk_row(df, idx):
+    row = df.iloc[idx]
+
+    risk = 0
+    flags = []
+
+    # -----------------------------------------
+    # 1. Accrual risk
+    # -----------------------------------------
+
+    accrual = row.get(
+        "AccrualRatio",
+        np.nan
+    )
+
+    if pd.notna(accrual):
+        if accrual > 0.10:
+            risk += 25
+            flags.append("Accrual distortion severe")
+        elif accrual > 0.05:
+            risk += 15
+            flags.append("Accrual distortion moderate")
+        elif accrual > 0.02:
+            risk += 5
+            flags.append("Accrual positive")
+
+    # -----------------------------------------
+    # 2. CFO conversion risk
+    # -----------------------------------------
+
+    cfo_ni = row.get(
+        "CFO_to_NI",
+        np.nan
+    )
+
+    net_income_ttm = row.get(
+        "net_income_TTM",
+        np.nan
+    )
+
+    if (
+        pd.notna(cfo_ni)
+        and pd.notna(net_income_ttm)
+        and net_income_ttm > 0
+    ):
+        if cfo_ni < 0.50:
+            risk += 20
+            flags.append("Very weak CFO conversion")
+        elif cfo_ni < 0.80:
+            risk += 10
+            flags.append("Weak CFO conversion")
+        elif cfo_ni < 1.00:
+            risk += 5
+            flags.append("CFO below NI")
+
+    # -----------------------------------------
+    # 3. FCF conversion risk
+    # -----------------------------------------
+
+    fcf_ni = row.get(
+        "FCF_to_NI",
+        np.nan
+    )
+
+    if (
+        pd.notna(fcf_ni)
+        and pd.notna(net_income_ttm)
+        and net_income_ttm > 0
+    ):
+        if fcf_ni < 0:
+            risk += 20
+            flags.append("Negative FCF despite profit")
+        elif fcf_ni < 0.50:
+            risk += 10
+            flags.append("Weak FCF conversion")
+        elif fcf_ni < 0.80:
+            risk += 5
+            flags.append("FCF below NI")
+
+    # -----------------------------------------
+    # 4. Leverage deterioration
+    # Compares current quarter with 4 quarters ago
+    # -----------------------------------------
+
+    if idx >= 4:
+        prev = df.iloc[idx - 4]
+
+        dte_now = safe_div(
+            row.get("liabilities", np.nan),
+            row.get("equity", np.nan)
+        )
+
+        dte_prev = safe_div(
+            prev.get("liabilities", np.nan),
+            prev.get("equity", np.nan)
+        )
+
+        if (
+            pd.notna(dte_now)
+            and pd.notna(dte_prev)
+            and dte_prev > 0
+        ):
+            if dte_now > dte_prev * 1.30:
+                risk += 15
+                flags.append("Leverage rising sharply")
+            elif dte_now > dte_prev * 1.15:
+                risk += 8
+                flags.append("Leverage rising")
+
+    # -----------------------------------------
+    # 5. Operating margin deterioration
+    # Compares current TTM margin with 4 quarters ago
+    # -----------------------------------------
+
+    if idx >= 4:
+        prev = df.iloc[idx - 4]
+
+        margin_now = safe_div(
+            row.get(
+                "operating_income_TTM",
+                np.nan
+            ),
+            row.get(
+                "revenue_TTM",
+                np.nan
+            )
+        )
+
+        margin_prev = safe_div(
+            prev.get(
+                "operating_income_TTM",
+                np.nan
+            ),
+            prev.get(
+                "revenue_TTM",
+                np.nan
+            )
+        )
+
+        if (
+            pd.notna(margin_now)
+            and pd.notna(margin_prev)
+            and margin_prev > 0
+        ):
+            decline = margin_prev - margin_now
+
+            if decline > 0:
+                penalty = min(
+                    20,
+                    decline * 200
+                )
+                risk += penalty
+                flags.append("Operating margin deteriorating")
+
+    # -----------------------------------------
+    # 6. Working capital stress
+    # -----------------------------------------
+
+    dso = row.get(
+        "DSO",
+        np.nan
+    )
+
+    inv_days = row.get(
+        "InventoryDays",
+        np.nan
+    )
+
+    if pd.notna(dso):
+        if dso > 90:
+            risk += 10
+            flags.append("High DSO")
+        elif dso > 60:
+            risk += 5
+            flags.append("Moderate DSO")
+
+    if pd.notna(inv_days):
+        if inv_days > 120:
+            risk += 10
+            flags.append("Inventory buildup")
+        elif inv_days > 90:
+            risk += 5
+            flags.append("Moderate inventory buildup")
+
+    # -----------------------------------------
+    # 7. Economic loss signal
+    # -----------------------------------------
+
+    spread = row.get(
+        "ROIC_WACC_Spread",
+        np.nan
+    )
+
+    if pd.notna(spread) and spread < 0:
+        risk += 10
+        flags.append("ROIC below WACC")
+
+    risk = round(
+        max(
+            0,
+            min(
+                100,
+                risk
+            )
+        ),
+        1
+    )
+
+    if not flags:
+        flags = [
+            "No major red flags"
+        ]
+
+    return risk, "; ".join(flags)
+
+
+# =====================================================
+# Corporate Engine
 # =====================================================
 
 def run_corporate_engine(
@@ -224,8 +586,6 @@ def run_corporate_engine(
         "dividend",
         "buyback",
     ]:
-        if col not in df.columns:
-            df[col] = np.nan
         df[col] = df[col].fillna(0)
 
     flows = [
@@ -241,9 +601,6 @@ def run_corporate_engine(
     ]
 
     for col in flows:
-        if col not in df.columns:
-            df[col] = np.nan
-
         df[f"{col}_TTM"] = (
             df[col]
             .rolling(
@@ -374,104 +731,33 @@ def run_corporate_engine(
         df["market_cap"]
     )
 
-    scores = []
+    risk_scores = []
+    quality_scores = []
     flags = []
 
-    for _, r in df.iterrows():
-        score = 0
-        f = []
-
-        if pd.notna(r["AccrualRatio"]):
-            if r["AccrualRatio"] > 0.10:
-                score += 25
-                f.append(
-                    "Accrual distortion severe"
-                )
-            elif r["AccrualRatio"] > 0.05:
-                score += 15
-                f.append(
-                    "Accrual distortion moderate"
-                )
-
-        if (
-            pd.notna(r["CFO_to_NI"])
-            and pd.notna(r["net_income_TTM"])
-            and r["net_income_TTM"] > 0
-        ):
-            if r["CFO_to_NI"] < 0.80:
-                score += 20
-                f.append(
-                    "Weak CFO conversion"
-                )
-            elif r["CFO_to_NI"] < 1.00:
-                score += 10
-                f.append(
-                    "CFO below NI"
-                )
-
-        if pd.notna(r["DSO"]):
-            if r["DSO"] > 90:
-                score += 15
-                f.append(
-                    "High DSO"
-                )
-            elif r["DSO"] > 60:
-                score += 10
-                f.append(
-                    "Moderate DSO"
-                )
-
-        if pd.notna(r["InventoryDays"]):
-            if r["InventoryDays"] > 120:
-                score += 15
-                f.append(
-                    "Inventory buildup"
-                )
-            elif r["InventoryDays"] > 90:
-                score += 10
-                f.append(
-                    "Moderate inventory buildup"
-                )
-
-        if (
-            pd.notna(r["ROIC_WACC_Spread"])
-            and r["ROIC_WACC_Spread"] < 0
-        ):
-            score += 15
-            f.append(
-                "ROIC below WACC"
-            )
-
-        if (
-            pd.notna(r["pbr"])
-            and r["pbr"] < 1
-        ):
-            f.append(
-                "PBR below 1x"
-            )
-
-        scores.append(
-            min(score, 100)
+    for i in range(len(df)):
+        risk, flag = calculate_forensic_risk_row(
+            df,
+            i
         )
 
-        flags.append(
-            "; ".join(f)
-            if f
-            else "No major red flags"
+        quality = calculate_quality_score(
+            df.iloc[i]
         )
 
-    df["ForensicRiskScore"] = scores
-    df["QualityScore"] = (
-        100
-        -
-        df["ForensicRiskScore"]
-    )
+        risk_scores.append(risk)
+        quality_scores.append(quality)
+        flags.append(flag)
+
+    df["ForensicRiskScore"] = risk_scores
+    df["QualityScore"] = quality_scores
     df["Flags"] = flags
 
     valid = df.dropna(
         subset=[
             "ROIC_TTM",
             "AccrualRatio",
+            "FCFMargin",
         ],
         how="all"
     )
@@ -493,13 +779,25 @@ def run_corporate_engine(
                 "sector",
                 "NA"
             ),
-            "Grade": forensic_grade(
+            "RiskGrade": risk_grade(
                 latest.get(
                     "ForensicRiskScore",
                     np.nan
                 )
             ),
+            "QualityGrade": quality_grade(
+                latest.get(
+                    "QualityScore",
+                    np.nan
+                )
+            ),
         }
+    )
+
+    # For backward compatibility with existing UI.
+    latest["Grade"] = latest.get(
+        "QualityGrade",
+        "NA"
     )
 
     latest["Regime"] = corporate_regime_label(
