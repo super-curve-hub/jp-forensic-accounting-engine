@@ -9,12 +9,6 @@ JP_COMPARE_PRESETS = {
         "6920",
         "6526",
     ],
-    "JP Bank": [
-        "8306",
-        "8316",
-        "8411",
-        "7182",
-    ],
     "JP Trading": [
         "8058",
         "8001",
@@ -38,74 +32,15 @@ JP_COMPARE_PRESETS = {
 }
 
 
-def _is_financial(latest):
-
-    sector = str(
-        latest.get(
-            "Sector",
-            latest.get(
-                "sector",
-                ""
-            )
-        )
-    ).lower()
-
-    return (
-        "bank" in sector
-        or "financial" in sector
-        or "insurance" in sector
-        or "capital markets" in sector
-        or "securities" in sector
-        or "銀行" in sector
-        or "証券" in sector
-        or "保険" in sector
-    )
-
-
 def latest_row_for_table(result):
 
     latest = result["latest"]
-
-    if _is_financial(latest):
-
-        return {
-            "Ticker": latest.get("Ticker"),
-            "Company": latest.get("Company"),
-            "Sector": latest.get("Sector"),
-            "Grade": latest.get("Grade"),
-            "Regime": latest.get("Regime"),
-
-            "ROE": latest.get("roe"),
-
-            "ROE-CoE": latest.get(
-                "ROE_EconomicSpread"
-            ),
-
-            "EconomicScore": latest.get(
-                "EconomicScore"
-            ),
-
-            "TotalYield": latest.get(
-                "TotalYield"
-            ),
-
-            "PBR": latest.get("pbr"),
-
-            "Risk": latest.get(
-                "ForensicRiskScore"
-            ),
-
-            "Quality": latest.get(
-                "QualityScore"
-            ),
-
-            "Flags": latest.get("Flags"),
-        }
 
     return {
         "Ticker": latest.get("Ticker"),
         "Company": latest.get("Company"),
         "Sector": latest.get("Sector"),
+
         "Grade": latest.get("Grade"),
         "Regime": latest.get("Regime"),
 
@@ -145,14 +80,6 @@ def latest_row_for_table(result):
 
         "PBR": latest.get("pbr"),
 
-        "ROE": latest.get("roe"),
-
-        "DSO": latest.get("DSO"),
-
-        "InventoryDays": latest.get(
-            "InventoryDays"
-        ),
-
         "Risk": latest.get(
             "ForensicRiskScore"
         ),
@@ -175,52 +102,22 @@ def rank_companies(rows):
     if df.empty:
         return df
 
-    # ==========================
-    # Bank Engine Output
-    # ==========================
+    required_cols = {
+        "ROIC": 0,
+        "ROIC-WACC": 0,
+        "FCFMargin": 0,
+        "CFO/NI": 0,
+        "BuybackYield": 0,
+        "DividendYieldProxy": 0,
+        "Risk": 50,
+        "Quality": 50,
+        "PBR": 999,
+    }
 
-    if (
-        "EconomicScore" in df.columns
-        and
-        df["EconomicScore"].notna().any()
-    ):
+    for col, default in required_cols.items():
 
-        return (
-            df
-            .sort_values(
-                "EconomicScore",
-                ascending=False
-            )
-            .reset_index(drop=True)
-        )
-
-    # ==========================
-    # Corporate Engine Output
-    # ==========================
-
-    if "BuybackYield" not in df.columns:
-        df["BuybackYield"] = 0
-
-    if "DividendYieldProxy" not in df.columns:
-        df["DividendYieldProxy"] = 0
-
-    if "ROIC" not in df.columns:
-        df["ROIC"] = 0
-
-    if "ROIC-WACC" not in df.columns:
-        df["ROIC-WACC"] = 0
-
-    if "FCFMargin" not in df.columns:
-        df["FCFMargin"] = 0
-
-    if "CFO/NI" not in df.columns:
-        df["CFO/NI"] = 0
-
-    if "Risk" not in df.columns:
-        df["Risk"] = 50
-
-    if "Quality" not in df.columns:
-        df["Quality"] = 50
+        if col not in df.columns:
+            df[col] = default
 
     df["CapitalPolicyScore"] = (
         df["BuybackYield"]
@@ -234,12 +131,10 @@ def rank_companies(rows):
 
     df["TSEReformScore"] = 0
 
-    if "PBR" in df.columns:
-
-        df.loc[
-            df["PBR"].fillna(999) < 1,
-            "TSEReformScore"
-        ] = 10
+    df.loc[
+        df["PBR"].fillna(999) < 1,
+        "TSEReformScore"
+    ] = 10
 
     df["EconomicScore"] = (
         df["ROIC-WACC"]
@@ -277,7 +172,10 @@ def rank_companies(rows):
         ascending=False
     )
 
-    return df.reset_index(drop=True)
+    return (
+        df
+        .reset_index(drop=True)
+    )
 
 
 def apply_screen(
@@ -292,31 +190,6 @@ def apply_screen(
         return df
 
     screen = df.copy()
-
-    # ==========================
-    # Bank Mode
-    # ==========================
-
-    if (
-        "ROE-CoE" in screen.columns
-        and
-        screen["ROE-CoE"].notna().any()
-    ):
-
-        screen = screen[
-            screen["Risk"]
-            .fillna(999)
-            <= risk_max
-        ]
-
-        return (
-            screen
-            .reset_index(drop=True)
-        )
-
-    # ==========================
-    # Corporate Mode
-    # ==========================
 
     screen = screen[
         screen["ROIC"]
