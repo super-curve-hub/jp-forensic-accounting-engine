@@ -113,9 +113,9 @@ with tab_analysis:
         ticker = selected_label.split("|")[0].strip()
 
         if st.button(
-            "Analyze",
-            use_container_width=True
-        ):
+    "Analyze",
+    width="stretch"
+):
             try:
                 result = run_jp_forensic_engine(
                     financial_df,
@@ -193,10 +193,9 @@ with tab_compare:
             )
 
             st.plotly_chart(
-                compare_scatter(ranked),
-                use_container_width=True
-            )
-
+    compare_scatter(ranked),
+    width="stretch"
+)
             render_ranking_table(ranked)
 
         if errors:
@@ -295,9 +294,9 @@ with tab_screening:
 
         if not screen_df.empty:
             st.plotly_chart(
-                screen_scatter(screen_df),
-                use_container_width=True
-            )
+    screen_scatter(screen_df),
+    width="stretch"
+)
 
             render_ranking_table(screen_df)
 
