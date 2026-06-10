@@ -117,74 +117,13 @@ def hero_card(latest, wacc_pct):
 
     company = latest.get("Company", "NA")
     ticker = latest.get("Ticker", "NA")
-    grade = latest.get("Grade", "NA")
-    regime = latest.get("Regime", "NA")
-
-    is_financial = is_financial_latest(latest)
-
-    risk = ratio_fmt(
-        latest.get("ForensicRiskScore"),
-        0
-    )
-
-    if is_financial:
-
-        metric1_name = "ROE"
-        metric1_value = pct_fmt(
-            latest.get("roe")
-        )
-
-        metric2_name = "ROE-CoE"
-        metric2_value = pct_fmt(
-            latest.get("ROE_EconomicSpread")
-        )
-
-        cost_label = f"CoE {pct_fmt(latest.get('CoE'))}"
-
-    else:
-
-        metric1_name = "ROIC"
-        metric1_value = pct_fmt(
-            latest.get("ROIC_TTM")
-        )
-
-        metric2_name = "ROIC-WACC"
-        metric2_value = pct_fmt(
-            latest.get("ROIC_WACC_Spread")
-        )
-
-        cost_label = f"WACC {wacc_pct:.1f}%"
-
-    st.markdown("# TEST")
 
     st.markdown(
         f"""
-        <div class="hero-card">
+## {company}
 
-            <div style="font-size:1.75rem;
-                        font-weight:800;
-                        margin-bottom:6px;">
-                {company}
-            </div>
-
-            <div style="
-                color:rgba(255,255,255,0.72);
-                font-size:0.95rem;
-                margin-bottom:14px;
-            ">
-                {ticker} | {cost_label}
-            </div>
-
-            <div style="
-                font-size:1.2rem;
-                font-weight:800;
-            ">
-                Grade {grade} — {regime}
-            </div>
-
-        </div>
-        """,
-        unsafe_allow_html=True
+**Ticker:** {ticker}
+        """
     )
 
     st.success("hero card rendered")
