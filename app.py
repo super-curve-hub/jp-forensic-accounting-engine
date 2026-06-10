@@ -136,9 +136,9 @@ with tab_analysis:
 
                 with st.expander("Raw Data"):
                     st.dataframe(
-                        result["df"],
-                        use_container_width=True
-                    )
+    result["df"],
+    width="stretch"
+)
 
             except Exception as e:
                 st.error("Analysis failed.")
@@ -200,7 +200,7 @@ with tab_compare:
 
         if errors:
             with st.expander("Errors"):
-                st.dataframe(errors, use_container_width=True)
+                st.dataframe(errors, width="stretch")
 
 
 with tab_screening:
@@ -302,4 +302,4 @@ with tab_screening:
 
         if errors:
             with st.expander("Errors"):
-                st.dataframe(errors, use_container_width=True)
+                st.dataframe(errors, width="stretch")
