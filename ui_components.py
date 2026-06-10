@@ -155,6 +155,8 @@ def hero_card(latest, wacc_pct):
 
         cost_label = f"WACC {wacc_pct:.1f}%"
 
+    st.markdown("# TEST")
+
     st.markdown(
         f"""
         <div class="hero-card">
@@ -180,42 +182,12 @@ def hero_card(latest, wacc_pct):
                 Grade {grade} — {regime}
             </div>
 
-            <div style="
-                margin-top:14px;
-                display:flex;
-                gap:22px;
-                flex-wrap:wrap;
-            ">
-
-                <div>
-                    {metric1_name}<br>
-                    <b style="font-size:1.35rem;">
-                        {metric1_value}
-                    </b>
-                </div>
-
-                <div>
-                    {metric2_name}<br>
-                    <b style="font-size:1.35rem;">
-                        {metric2_value}
-                    </b>
-                </div>
-
-                <div>
-                    Risk<br>
-                    <b style="font-size:1.35rem;">
-                        {risk}
-                    </b>
-                </div>
-
-            </div>
-
         </div>
         """,
         unsafe_allow_html=True
     )
 
-st.success("hero card rendered")
+    st.success("hero card rendered")
 
 def metric_cards(latest):
 
