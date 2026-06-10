@@ -1,20 +1,24 @@
 import pandas as pd
 
 
+# =====================================================
+# Compare Presets
+# =====================================================
+
 JP_COMPARE_PRESETS = {
     "JP Semiconductor": [
-        "8035",
-        "6857",
-        "6146",
-        "6920",
-        "6526",
+        "8035",  # 東京エレクトロン
+        "6857",  # アドバンテスト
+        "6146",  # ディスコ
+        "6920",  # レーザーテック
+        "6526",  # ソシオネクスト
     ],
     "JP Trading": [
-        "8058",
-        "8001",
-        "8031",
-        "8053",
-        "8002",
+        "8058",  # 三菱商事
+        "8001",  # 伊藤忠
+        "8031",  # 三井物産
+        "8053",  # 住友商事
+        "8002",  # 丸紅
     ],
     "JP Shipping": [
         "9101",
@@ -32,19 +36,32 @@ JP_COMPARE_PRESETS = {
 }
 
 
+# =====================================================
+# Latest Row
+# =====================================================
+
 def latest_row_for_table(result):
 
     latest = result["latest"]
 
     return {
+
         "Ticker": latest.get("Ticker"),
+
         "Company": latest.get("Company"),
-        "Sector": latest.get("Sector"),
+
+        "Sector": latest.get(
+            "Sector",
+            latest.get("sector")
+        ),
 
         "Grade": latest.get("Grade"),
+
         "Regime": latest.get("Regime"),
 
-        "ROIC": latest.get("ROIC_TTM"),
+        "ROIC": latest.get(
+            "ROIC_TTM"
+        ),
 
         "ROIC-WACC": latest.get(
             "ROIC_WACC_Spread"
@@ -78,7 +95,9 @@ def latest_row_for_table(result):
             "DividendYieldProxy"
         ),
 
-        "PBR": latest.get("pbr"),
+        "PBR": latest.get(
+            "pbr"
+        ),
 
         "Risk": latest.get(
             "ForensicRiskScore"
@@ -88,14 +107,24 @@ def latest_row_for_table(result):
             "QualityScore"
         ),
 
-        "Flags": latest.get("Flags"),
+        "Flags": latest.get(
+            "Flags"
+        ),
     }
 
 
+# =====================================================
+# Ranking Engine
+# =====================================================
+
 def rank_companies(rows):
 
-    if isinstance(rows, pd.DataFrame):
+    if isinstance(
+        rows,
+        pd.DataFrame
+    ):
         df = rows.copy()
+
     else:
         df = pd.DataFrame(rows)
 
@@ -103,14 +132,23 @@ def rank_companies(rows):
         return df
 
     required_cols = {
+
         "ROIC": 0,
+
         "ROIC-WACC": 0,
+
         "FCFMargin": 0,
+
         "CFO/NI": 0,
+
         "BuybackYield": 0,
+
         "DividendYieldProxy": 0,
+
         "Risk": 50,
+
         "Quality": 50,
+
         "PBR": 999,
     }
 
@@ -119,15 +157,26 @@ def rank_companies(rows):
         if col not in df.columns:
             df[col] = default
 
+    # ==========================================
+    # Capital Allocation
+    # ==========================================
+
     df["CapitalPolicyScore"] = (
+
         df["BuybackYield"]
         .fillna(0)
         * 200
+
         +
+
         df["DividendYieldProxy"]
         .fillna(0)
         * 100
     )
+
+    # ==========================================
+    # TSE Reform
+    # ==========================================
 
     df["TSEReformScore"] = 0
 
@@ -136,33 +185,52 @@ def rank_companies(rows):
         "TSEReformScore"
     ] = 10
 
+    # ==========================================
+    # Economic Score
+    # ==========================================
+
     df["EconomicScore"] = (
+
         df["ROIC-WACC"]
         .fillna(0)
-        * 150
+        * 100
+
         +
+
         df["ROIC"]
         .fillna(0)
         * 100
+
         +
+
         df["FCFMargin"]
         .fillna(0)
-        * 75
+        * 50
+
         +
+
         df["CFO/NI"]
         .fillna(0)
         .clip(upper=3)
         * 10
+
         +
+
         df["CapitalPolicyScore"]
         .fillna(0)
+
         +
+
         df["TSEReformScore"]
         .fillna(0)
+
         +
+
         df["Quality"]
         .fillna(0)
+
         -
+
         df["Risk"]
         .fillna(0)
     )
@@ -178,6 +246,10 @@ def rank_companies(rows):
     )
 
 
+# =====================================================
+# Screening
+# =====================================================
+
 def apply_screen(
     df,
     roic_min_pct,
@@ -191,11 +263,19 @@ def apply_screen(
 
     screen = df.copy()
 
+    # ==========================================
+    # ROIC Filter
+    # ==========================================
+
     screen = screen[
         screen["ROIC"]
         .fillna(-999)
         >= roic_min_pct / 100
     ]
+
+    # ==========================================
+    # Spread Filter
+    # ==========================================
 
     screen = screen[
         screen["ROIC-WACC"]
@@ -203,11 +283,19 @@ def apply_screen(
         >= spread_min_pct / 100
     ]
 
+    # ==========================================
+    # Risk Filter
+    # ==========================================
+
     screen = screen[
         screen["Risk"]
         .fillna(999)
         <= risk_max
     ]
+
+    # ==========================================
+    # Accrual Filter
+    # ==========================================
 
     screen = screen[
         screen["Accrual"]
@@ -219,3 +307,6 @@ def apply_screen(
         screen
         .reset_index(drop=True)
     )
+
+
+print("SCREENER LOADED")
