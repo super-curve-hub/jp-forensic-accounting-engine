@@ -124,52 +124,80 @@ def is_financial_latest(latest):
 
 def hero_card(latest, wacc_pct):
 
-    st.write(latest)
-    
     company = latest.get("Company", "NA")
     ticker = latest.get("Ticker", "NA")
     grade = latest.get("Grade", "NA")
     regime = latest.get("Regime", "NA")
 
-    st.subheader(company)
+    is_financial = is_financial_latest(latest)
 
-    st.caption(
-        f"{ticker} | WACC {wacc_pct:.1f}%"
+    risk = ratio_fmt(
+        latest.get("ForensicRiskScore"),
+        0
     )
 
+    st.subheader(company)
+
+    if is_financial:
+
+        st.caption(
+            f"{ticker} | CoE {pct_fmt(latest.get('CoE'))}"
+        )
+
+        metric1_name = "ROE"
+        metric1_value = pct_fmt(
+            latest.get("roe")
+        )
+
+        metric2_name = "ROE-CoE"
+        metric2_value = pct_fmt(
+            latest.get(
+                "ROE_EconomicSpread"
+            )
+        )
+
+    else:
+
+        st.caption(
+            f"{ticker} | WACC {wacc_pct:.1f}%"
+        )
+
+        metric1_name = "ROIC"
+        metric1_value = pct_fmt(
+            latest.get(
+                "ROIC_TTM"
+            )
+        )
+
+        metric2_name = "ROIC-WACC"
+        metric2_value = pct_fmt(
+            latest.get(
+                "ROIC_WACC_Spread"
+            )
+        )
+
     st.markdown(
-        f"### Grade {grade} — {regime}"
+        f"## Grade {grade} — {regime}"
     )
 
     c1, c2, c3 = st.columns(3)
 
     with c1:
         st.metric(
-            "ROIC",
-            pct_fmt(
-                latest.get("ROIC_TTM")
-            )
+            metric1_name,
+            metric1_value
         )
 
     with c2:
         st.metric(
-            "ROIC-WACC",
-            pct_fmt(
-                latest.get(
-                    "ROIC_WACC_Spread"
-                )
-            )
+            metric2_name,
+            metric2_value
         )
 
     with c3:
         st.metric(
             "Risk",
-            ratio_fmt(
-                latest.get(
-                    "ForensicRiskScore"
-                ),
-                0
-            )
+            risk
         )
 
 
