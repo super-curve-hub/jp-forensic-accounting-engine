@@ -113,6 +113,8 @@ def is_financial_latest(latest):
 
 def hero_card(latest, wacc_pct):
 
+    st.write(latest)
+    
     company = latest.get("Company", "NA")
     ticker = latest.get("Ticker", "NA")
     grade = latest.get("Grade", "NA")
