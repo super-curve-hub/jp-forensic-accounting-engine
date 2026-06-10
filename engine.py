@@ -35,6 +35,10 @@ FINANCIAL_SECTORS = [
     "Insurance",
     "Capital Markets",
     "Financial Services",
+    "銀行",
+    "保険",
+    "証券",
+    "金融"
 ]
 
 
