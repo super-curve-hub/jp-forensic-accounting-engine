@@ -95,6 +95,7 @@ def metric_card(label, value, note=""):
 
 
 def is_financial_latest(latest):
+
     sector = str(
         latest.get(
             "Sector",
@@ -102,12 +103,22 @@ def is_financial_latest(latest):
         )
     ).lower()
 
-    return (
-        "bank" in sector
-        or "financial" in sector
-        or "insurance" in sector
-        or "capital markets" in sector
-        or "securities" in sector
+    financial_keywords = [
+        "bank",
+        "banks",
+        "financial",
+        "insurance",
+        "capital markets",
+        "securities",
+        "銀行",
+        "保険",
+        "証券",
+        "金融"
+    ]
+
+    return any(
+        keyword in sector
+        for keyword in financial_keywords
     )
 
 
