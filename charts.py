@@ -140,35 +140,18 @@ def render_trend_charts(result):
 
 def _bubble_size(plot_df):
 
-    if (
-        "EconomicScore" in plot_df.columns
-        and
-        plot_df["EconomicScore"].notna().any()
-    ):
+    score = pd.to_numeric(
+        plot_df.get(
+            "EconomicScore",
+            50
+        ),
+        errors="coerce"
+    ).fillna(50)
 
-        return (
-            plot_df["EconomicScore"]
-            .fillna(1)
-            .clip(lower=1)
-            ** 0.5
-        )
-
-    if (
-        "Quality" in plot_df.columns
-        and
-        plot_df["Quality"].notna().any()
-    ):
-
-        return (
-            plot_df["Quality"]
-            .fillna(1)
-            .clip(lower=1)
-            ** 0.5
-        )
-
-    return pd.Series(
-        [10] * len(plot_df),
-        index=plot_df.index
+    return (
+        score
+        .clip(lower=1)
+        ** 0.5
     )
 
 
@@ -220,25 +203,19 @@ def _build_hover_cols(plot_df):
 
 
 # =====================================================
-# Compare Scatter
+# Shared Scatter Prep
 # =====================================================
 
-def compare_scatter(compare_df):
+def _prepare_scatter_df(df):
 
-    if compare_df.empty:
-        return px.scatter()
-
-    plot_df = compare_df.copy()
-
-    if "Risk" not in plot_df.columns:
-        plot_df["Risk"] = 50
-
-    if "EconomicScore" not in plot_df.columns:
-        plot_df["EconomicScore"] = 50
+    plot_df = df.copy()
 
     plot_df["EconomicScore"] = (
         pd.to_numeric(
-            plot_df["EconomicScore"],
+            plot_df.get(
+                "EconomicScore",
+                50
+            ),
             errors="coerce"
         )
         .fillna(50)
@@ -246,7 +223,10 @@ def compare_scatter(compare_df):
 
     plot_df["Risk"] = (
         pd.to_numeric(
-            plot_df["Risk"],
+            plot_df.get(
+                "Risk",
+                50
+            ),
             errors="coerce"
         )
         .fillna(50)
@@ -256,8 +236,22 @@ def compare_scatter(compare_df):
         _bubble_size(plot_df)
     )
 
-    hover_cols = (
-        _build_hover_cols(plot_df)
+    return plot_df
+
+
+# =====================================================
+# Compare Scatter
+# =====================================================
+
+def compare_scatter(compare_df):
+
+    if compare_df.empty:
+        return px.scatter()
+
+    plot_df = (
+        _prepare_scatter_df(
+            compare_df
+        )
     )
 
     fig = px.scatter(
@@ -269,7 +263,7 @@ def compare_scatter(compare_df):
         color="EconomicScore",
         color_continuous_scale="RdYlGn",
         hover_name="Ticker",
-        hover_data=hover_cols,
+        hover_data=_build_hover_cols(plot_df),
         title="Economic Score vs Risk"
     )
 
@@ -285,7 +279,7 @@ def compare_scatter(compare_df):
 
 
 # =====================================================
-# Screening Scatter
+# Screen Scatter
 # =====================================================
 
 def screen_scatter(screen_df):
@@ -293,36 +287,10 @@ def screen_scatter(screen_df):
     if screen_df.empty:
         return px.scatter()
 
-    plot_df = screen_df.copy()
-
-    if "Risk" not in plot_df.columns:
-        plot_df["Risk"] = 50
-
-    if "EconomicScore" not in plot_df.columns:
-        plot_df["EconomicScore"] = 50
-
-    plot_df["EconomicScore"] = (
-        pd.to_numeric(
-            plot_df["EconomicScore"],
-            errors="coerce"
+    plot_df = (
+        _prepare_scatter_df(
+            screen_df
         )
-        .fillna(50)
-    )
-
-    plot_df["Risk"] = (
-        pd.to_numeric(
-            plot_df["Risk"],
-            errors="coerce"
-        )
-        .fillna(50)
-    )
-
-    plot_df["BubbleSize"] = (
-        _bubble_size(plot_df)
-    )
-
-    hover_cols = (
-        _build_hover_cols(plot_df)
     )
 
     fig = px.scatter(
@@ -334,7 +302,7 @@ def screen_scatter(screen_df):
         color="EconomicScore",
         color_continuous_scale="RdYlGn",
         hover_name="Ticker",
-        hover_data=hover_cols,
+        hover_data=_build_hover_cols(plot_df),
         title="Screened Candidates"
     )
 
